@@ -11,7 +11,6 @@ const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 const db = new sqlite3.Database(':memory:');
 
-
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(session({
     secret: 'secret-key',
@@ -19,13 +18,13 @@ app.use(session({
     saveUninitialized: true
 }));
 
+app.use(express.static('public'));
+
 let users = [];
 
 db.serialize(() => {
     db.run("CREATE TABLE messages (username TEXT, message TEXT, timestamp TEXT)");
 });
-
-app.use(express.static('public'));
 
 app.post('/login', (req, res) => {
     const username = req.body.username;
@@ -48,20 +47,43 @@ app.get('/', (req, res) => {
 wss.on('connection', (ws, req) => {
     const session = req.session;
     if (session && session.username) {
-        console.log(`User ${session.username} connected`);
+        users.push(session.username);
+        wss.clients.forEach(client => {
+            if (client.readyState === WebSocket.OPEN) {
+                client.send(JSON.stringify({ type: 'users', users }));
+            }
+        });
+
+        db.each("SELECT username, message, timestamp FROM messages", (err, row) => {
+            if (err) {
+                console.error(err.message);
+            } else {
+                ws.send(JSON.stringify({ type: 'message', username: row.username, message: row.message, timestamp: row.timestamp }));
+            }
+        });
 
         ws.on('message', (data) => {
             const message = JSON.parse(data);
-            console.log(`Received: ${message.username}: ${message.message}`);
+            message.message = sanitizeHtml(message.message);
+            db.run(`INSERT INTO messages(username, message, timestamp) VALUES(?, ?, ?)`, [message.username, message.message, message.timestamp], function(err) {
+                if (err) {
+                    return console.log(err.message);
+                }
+            });
             wss.clients.forEach(client => {
-                if (client !== ws && client.readyState === WebSocket.OPEN) {
+                if (client.readyState === WebSocket.OPEN) {
                     client.send(JSON.stringify(message));
                 }
             });
         });
 
         ws.on('close', () => {
-            console.log(`User ${session.username} disconnected`);
+            users = users.filter(user => user !== session.username);
+            wss.clients.forEach(client => {
+                if (client.readyState === WebSocket.OPEN) {
+                    client.send(JSON.stringify({ type: 'users', users }));
+                }
+            });
         });
     } else {
         ws.close();

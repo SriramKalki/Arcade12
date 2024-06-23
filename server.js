@@ -3,10 +3,14 @@ const http = require('http');
 const WebSocket = require('ws');
 const session = require('express-session');
 const bodyParser = require('body-parser');
+const sanitizeHtml = require('sanitize-html');
+const sqlite3 = require('sqlite3').verbose();
 
 const app = express();
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
+const db = new sqlite3.Database(':memory:');
+
 
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(session({
@@ -14,6 +18,12 @@ app.use(session({
     resave: false,
     saveUninitialized: true
 }));
+
+let users = [];
+
+db.serialize(() => {
+    db.run("CREATE TABLE messages (username TEXT, message TEXT, timestamp TEXT)");
+});
 
 app.use(express.static('public'));
 

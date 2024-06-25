@@ -1,17 +1,22 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Chat Application</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chat Application</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <h1>Real-time Chat Application</h1>
-    <div id="chat-container">
-        <div id="user-list"></div>
-        <div id="chat-box"></div>
-        <input type="text" id="message-input" placeholder="Type a message...">
-        <button id="send-button">Send</button>
-    </div>
-    <script src="client.js"></script>
+  <div class="chat-container">
+    <header>
+      <h1>Chat Room</h1>
+    </header>
+    <div id="chat-box"></div>
+    <form id="chat-form">
+      <input type="text" id="chat-input" placeholder="Type a message..." autocomplete="off" required />
+      <button type="submit">Send</button>
+    </form>
+  </div>
+  <script src="app.js"></script>
 </body>
 </html>
